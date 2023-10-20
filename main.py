@@ -3,14 +3,13 @@ import numpy as np
 
 studentAI = StudentAI(1)
 
-studentAI.add_layer(1, [0.1, 0.1])
-studentAI.add_layer(1, [0.3, 0.3])
+studentAI.add_custom_layer(np.matrix('0.1; -0.1; 0.3'))
+studentAI.add_custom_layer(np.matrix('0.7 0.9 -0.4'))
 
 input_values = np.matrix(0.5)
 expected_values = np.matrix(0.1)
 alfa = 0.01
 
-# studentAI.train_layer(input_values, expected_values, 1, alfa)
-studentAI.train(input_values, expected_values, 1, alfa)
+studentAI.train(input_values, expected_values, 1, alfa, with_activation=True)
 
 print(studentAI.weights_matrix_list)

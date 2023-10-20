@@ -22,6 +22,15 @@ class StudentAI:
         except:
             raise Exception('Input vector dimensions doesnt match weight matrix')
 
+    def deep_neural_network_with_activation(self, input_vector, weights_matrix_list):
+        inputs = input_vector
+        try:
+            for weights_matrix in weights_matrix_list:
+                inputs = self.rectified_linear_unit(self.neural_network(inputs, weights_matrix))
+            return inputs
+        except:
+            raise Exception('Input vector dimensions doesnt match weight matrix')
+
     def add_layer(self, n, weight_range_values):
         min_value = weight_range_values[0]
         max_value = weight_range_values[1]
@@ -35,9 +44,21 @@ class StudentAI:
             matrix_layer = np.matrix(np.random.uniform(min_value, max_value, (n, entry_values_count)))
             self.weights_matrix_list.append(matrix_layer)
 
+    def add_custom_layer(self, matrix_layer):
+        if self.weights_matrix_list is None:
+            self.weights_matrix_list = [matrix_layer]
+        else:
+            self.weights_matrix_list.append(matrix_layer)
+
     def predict(self, input_values):
         try:
             return self.deep_neural_network(input_values, self.weights_matrix_list)
+        except Exception as error:
+            print(error)
+
+    def predict_with_activation(self, input_values):
+        try:
+            return self.deep_neural_network_with_activation(input_values, self.weights_matrix_list)
         except Exception as error:
             print(error)
 
@@ -55,26 +76,26 @@ class StudentAI:
         except Exception as error:
             print(error)
 
-    def train(self, input_values, expected_values, train_count, alpha):
+    def train(self, input_values, expected_values, train_count, alpha, with_activation=False):
         for i in range(train_count):
             for column_index in range(input_values.shape[1]):
                 input_series = input_values[:, column_index]
                 expected_series = expected_values[:, column_index]
                 number_of_layers = len(self.weights_matrix_list)
-                delta = None
 
+                delta = None
                 weight_delta_list = []
                 for weight_matrix_index in range(number_of_layers - 1, -1, -1):
                     if weight_matrix_index == number_of_layers - 1:
-                        delta = self.calculate_layer_output_delta(input_series, expected_series)
+                        delta = self.calculate_layer_output_delta(input_series, expected_series, with_activation)
                     else:
                         delta = self.calculate_layer_delta_from_next_layer(delta, self.weights_matrix_list[
                             weight_matrix_index + 1])
                     weight_delta = self.calculate_weight_delta(input_series, delta)
+                    if with_activation:
+                        rlu_weight = self.rectified_linear_unit(self.weights_matrix_list[weight_matrix_index])
+                        weight_delta = np.multiply(weight_delta, self.rectified_linear_unit_derivative(rlu_weight))
                     weight_delta_list.append(weight_delta)
-                    print("Layer: " + str(weight_matrix_index))
-                    print("Delta: " + str(delta))
-                    print("Weight delta: " + str(weight_delta))
                 weight_delta_list.reverse()
                 for weight_matrix_index in range(number_of_layers):
                     self.weights_matrix_list[weight_matrix_index] = self.weights_matrix_list[
@@ -94,12 +115,10 @@ class StudentAI:
 
     def print_error(self, input_values, expected_values):
         print("Error: ")
-        print(self.get_error_for_serie(input_values, expected_values))
+        print(self.get_error_for_series(input_values, expected_values))
 
     def calculate_weight_delta(self, input_values, delta):
         weight_delta = np.outer(delta, input_values)
-        print("Weight delta: ")
-        print(weight_delta)
         return weight_delta
 
     def calculate_delta(self, input_values, expected_values, weights_matrix):
@@ -108,9 +127,9 @@ class StudentAI:
         delta = 2 * (1 / n) * (output - expected_values)
         return delta
 
-    def calculate_layer_output_delta(self, input_values, expected_values):
+    def calculate_layer_output_delta(self, input_values, expected_values, with_activation):
         n = len(expected_values)
-        output = self.predict(input_values)
+        output = self.predict(input_values) if not with_activation else self.predict_with_activation(input_values)
         delta = 2 * (1 / n) * (output - expected_values)
         return delta
 
@@ -121,11 +140,11 @@ class StudentAI:
     def get_error(self, input_values, expected_values):
         error = 0
         series_count = input_values.shape[1]
-        for serie_index in range(series_count):
-            error += self.get_error_for_serie(input_values[:, serie_index], expected_values[:, serie_index])
+        for series_index in range(series_count):
+            error += self.get_error_for_series(input_values[:, series_index], expected_values[:, series_index])
         return error
 
-    def get_error_for_serie(self, input_values, expected_values):
+    def get_error_for_series(self, input_values, expected_values):
         n = expected_values.shape[0]
         prediction = self.predict(input_values)
         error_sum = 0
