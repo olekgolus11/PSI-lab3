@@ -79,10 +79,10 @@ class StudentAI:
             print(error)
 
     def train(self, input_values, expected_values, train_count, alpha, with_activation=False):
-        all_input_vectors = self.get_all_input_vectors(input_values, with_activation)
         for i in range(train_count):
             for column_index in range(input_values.shape[1]):
                 input_series = input_values[:, column_index]
+                all_input_vectors = self.get_all_input_vectors(input_series, with_activation)
                 expected_series = expected_values[:, column_index]
                 number_of_layers = len(self.weights_matrix_list)
 
@@ -95,15 +95,15 @@ class StudentAI:
                         delta = self.calculate_layer_delta_from_next_layer(delta, self.weights_matrix_list[
                             weight_matrix_index + 1])
                     if with_activation and weight_matrix_index != number_of_layers - 1:
-                        rlu_weight = self.rectified_linear_unit(self.weights_matrix_list[weight_matrix_index])
-                        delta = np.multiply(delta, self.rectified_linear_unit_derivative(rlu_weight))
+                        # rlu_weight = self.rectified_linear_unit(self.weights_matrix_list[weight_matrix_index])
+                        delta = np.multiply(delta, self.rectified_linear_unit_derivative(all_input_vectors[weight_matrix_index + 1]))
                     weight_delta = self.calculate_weight_delta(all_input_vectors[weight_matrix_index], delta)
                     weight_delta_list.append(weight_delta)
                 weight_delta_list.reverse()
+                print(f"Output for {column_index + 1} series:")
+                print(self.predict_with_activation(input_series))
                 for weight_matrix_index in range(number_of_layers):
-                    self.weights_matrix_list[weight_matrix_index] = self.weights_matrix_list[
-                                                                        weight_matrix_index] - weight_delta_list[
-                                                                        weight_matrix_index] * alpha
+                    self.weights_matrix_list[weight_matrix_index] = self.weights_matrix_list[weight_matrix_index] - weight_delta_list[weight_matrix_index] * alpha
 
     def get_all_input_vectors(self, input_values, with_activation):
         outputs = [input_values]
@@ -148,7 +148,7 @@ class StudentAI:
 
     def calculate_layer_delta_from_next_layer(self, next_layer_delta, weights_matrix):
         weights_matrix_transposed = np.transpose(weights_matrix)
-        delta = np.multiply(weights_matrix_transposed, next_layer_delta) #TODO invert this
+        delta = np.matmul(weights_matrix_transposed, next_layer_delta)
         return delta
 
     def get_error(self, input_values, expected_values):
@@ -172,4 +172,5 @@ class StudentAI:
         return np.maximum(x, 0)
 
     def rectified_linear_unit_derivative(self, x):
-        return np.where(x <= 0, 0, 1)
+        res = np.where(x <= 0, 0, 1)
+        return res
