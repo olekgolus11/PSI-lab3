@@ -25,8 +25,10 @@ class StudentAI:
     def deep_neural_network_with_activation(self, input_vector, weights_matrix_list):
         inputs = input_vector
         try:
-            for weights_matrix in weights_matrix_list:
-                inputs = self.rectified_linear_unit(self.neural_network(inputs, weights_matrix))
+            for list_index, weights_matrix in enumerate(weights_matrix_list):
+                inputs = self.neural_network(inputs, weights_matrix)
+                if list_index is not len(self.weights_matrix_list) - 1:
+                    inputs = self.rectified_linear_unit(inputs)
             return inputs
         except:
             raise Exception('Input vector dimensions doesnt match weight matrix')
@@ -77,6 +79,7 @@ class StudentAI:
             print(error)
 
     def train(self, input_values, expected_values, train_count, alpha, with_activation=False):
+        all_input_vectors = self.get_all_input_vectors(input_values, with_activation)
         for i in range(train_count):
             for column_index in range(input_values.shape[1]):
                 input_series = input_values[:, column_index]
@@ -91,16 +94,26 @@ class StudentAI:
                     else:
                         delta = self.calculate_layer_delta_from_next_layer(delta, self.weights_matrix_list[
                             weight_matrix_index + 1])
-                    weight_delta = self.calculate_weight_delta(input_series, delta)
-                    if with_activation:
+                    if with_activation and weight_matrix_index != number_of_layers - 1:
                         rlu_weight = self.rectified_linear_unit(self.weights_matrix_list[weight_matrix_index])
-                        weight_delta = np.multiply(weight_delta, self.rectified_linear_unit_derivative(rlu_weight))
+                        delta = np.multiply(delta, self.rectified_linear_unit_derivative(rlu_weight))
+                    weight_delta = self.calculate_weight_delta(all_input_vectors[weight_matrix_index], delta)
                     weight_delta_list.append(weight_delta)
                 weight_delta_list.reverse()
                 for weight_matrix_index in range(number_of_layers):
                     self.weights_matrix_list[weight_matrix_index] = self.weights_matrix_list[
                                                                         weight_matrix_index] - weight_delta_list[
                                                                         weight_matrix_index] * alpha
+
+    def get_all_input_vectors(self, input_values, with_activation):
+        outputs = [input_values]
+        for i in range(len(self.weights_matrix_list) - 1):
+            if with_activation:
+                layer_output = self.deep_neural_network_with_activation(input_values, self.weights_matrix_list[:i + 1])
+            else:
+                layer_output = self.deep_neural_network(input_values, self.weights_matrix_list[:i + 1])
+            outputs.append(layer_output)
+        return outputs
 
     def train_layer(self, input_values, expected_values, weight_matrix_index, alpha):
         pass
@@ -134,7 +147,8 @@ class StudentAI:
         return delta
 
     def calculate_layer_delta_from_next_layer(self, next_layer_delta, weights_matrix):
-        delta = np.outer(next_layer_delta, weights_matrix)
+        weights_matrix_transposed = np.transpose(weights_matrix)
+        delta = np.multiply(weights_matrix_transposed, next_layer_delta) #TODO invert this
         return delta
 
     def get_error(self, input_values, expected_values):
