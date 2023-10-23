@@ -1,8 +1,10 @@
 import numpy as np
+from Activation_function import Activation_function
 
 
 class StudentAI:
     weights_matrix_list = None
+    layers_activation_function_list = None
 
     def __init__(self, number_of_entry_values):
         self.number_of_entry_values = number_of_entry_values
@@ -33,7 +35,7 @@ class StudentAI:
         except:
             raise Exception('Input vector dimensions doesnt match weight matrix')
 
-    def add_layer(self, n, weight_range_values):
+    def add_layer(self, n, weight_range_values=[0, 1], activation_function=Activation_function.RLU):
         min_value = weight_range_values[0]
         max_value = weight_range_values[1]
 
@@ -41,16 +43,20 @@ class StudentAI:
             entry_values_count = self.number_of_entry_values
             matrix_layer = np.matrix(np.random.uniform(min_value, max_value, (n, entry_values_count)))
             self.weights_matrix_list = [matrix_layer]
+            self.layers_activation_function_list = [activation_function]
         else:
             entry_values_count = self.weights_matrix_list[-1].shape[0]
             matrix_layer = np.matrix(np.random.uniform(min_value, max_value, (n, entry_values_count)))
             self.weights_matrix_list.append(matrix_layer)
+            self.layers_activation_function_list.append(activation_function)
 
-    def add_custom_layer(self, matrix_layer):
+    def add_custom_layer(self, matrix_layer, activation_function=Activation_function.RLU):
         if self.weights_matrix_list is None:
             self.weights_matrix_list = [matrix_layer]
+            self.layers_activation_function_list = [activation_function]
         else:
             self.weights_matrix_list.append(matrix_layer)
+            self.layers_activation_function_list.append(activation_function)
 
     def predict(self, input_values):
         try:
@@ -64,17 +70,25 @@ class StudentAI:
         except Exception as error:
             print(error)
 
+    def save_weights_npz(self, file_name):
+        np.savez(file_name, self.weights_matrix_list)
+
+    def load_weights_npz(self, file_name):
+        loaded = np.load(f"{file_name}.npz")
+        self.weights_matrix_list = loaded['arr_0']
+
     def load_weights(self, file_name):
-        loaded_matrix = np.matrix(np.genfromtxt(file_name, delimiter=" "))
+        loaded_text = np.genfromtxt(file_name, delimiter=" ")
+        parsed_matrix = np.matrix(loaded_text)
         try:
             if self.weights_matrix_list is None:
-                if loaded_matrix.shape[1] != self.number_of_entry_values:
+                if parsed_matrix.shape[1] != self.number_of_entry_values:
                     raise Exception('Loaded matrix is in incorrect shape')
-                self.weights_matrix_list = [loaded_matrix]
+                self.weights_matrix_list = [parsed_matrix]
             else:
-                if loaded_matrix.shape[1] != self.weights_matrix_list[-1].shape[0]:
+                if parsed_matrix.shape[1] != self.weights_matrix_list[-1].shape[0]:
                     raise Exception('Loaded matrix is in incorrect shape')
-                self.weights_matrix_list.append(loaded_matrix)
+                self.weights_matrix_list.append(parsed_matrix)
         except Exception as error:
             print(error)
 
@@ -95,15 +109,16 @@ class StudentAI:
                         delta = self.calculate_layer_delta_from_next_layer(delta, self.weights_matrix_list[
                             weight_matrix_index + 1])
                     if with_activation and weight_matrix_index != number_of_layers - 1:
-                        # rlu_weight = self.rectified_linear_unit(self.weights_matrix_list[weight_matrix_index])
-                        delta = np.multiply(delta, self.rectified_linear_unit_derivative(all_input_vectors[weight_matrix_index + 1]))
+                        delta = np.multiply(delta, self.rectified_linear_unit_derivative(
+                            all_input_vectors[weight_matrix_index + 1]))
                     weight_delta = self.calculate_weight_delta(all_input_vectors[weight_matrix_index], delta)
                     weight_delta_list.append(weight_delta)
                 weight_delta_list.reverse()
-                print(f"Output for {column_index + 1} series:")
-                print(self.predict_with_activation(input_series))
+                # print(f"Output for {column_index + 1} series:")
+                # print(self.predict_with_activation(input_series))
                 for weight_matrix_index in range(number_of_layers):
-                    self.weights_matrix_list[weight_matrix_index] = self.weights_matrix_list[weight_matrix_index] - weight_delta_list[weight_matrix_index] * alpha
+                    self.weights_matrix_list[weight_matrix_index] = self.weights_matrix_list[weight_matrix_index] - \
+                                                                    weight_delta_list[weight_matrix_index] * alpha
 
     def get_all_input_vectors(self, input_values, with_activation):
         outputs = [input_values]
