@@ -50,4 +50,4 @@ for i in range(10000):
     if np.argmax(result) == np.argmax(expected_values):
         correct += 1
 
-print(f"Accuracy: {correct / 10000}%, {correct} / 10000")
+print(f"Accuracy: {(correct / 10000) * 100}%, {correct} / 10000")
