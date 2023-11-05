@@ -1,8 +1,9 @@
+from Activation_function import Activation_function
 from StudentAI import StudentAI
 import numpy as np
 
 studentAI = StudentAI(784)
-studentAI.add_layer(40, [-0.1, 0.1])
+studentAI.add_layer(40, [-0.1, 0.1], Activation_function.RLU)
 studentAI.add_layer(10, [-0.1, 0.1])
 
 with open('train-images.idx3-ubyte', 'rb') as f:
@@ -38,7 +39,7 @@ for i in range(60000):
     expected_values = np.zeros((1, 10))
     expected_values[0, train_labels[i]] = 1
     expected_values = np.transpose(np.matrix(expected_values))
-    studentAI.train(input_values, expected_values, 1, 0.1, True)
+    studentAI.train(input_values, expected_values, 1, 0.1)
 
 correct = 0
 for i in range(10000):
@@ -46,8 +47,9 @@ for i in range(10000):
     expected_values = np.zeros((1, 10))
     expected_values[0, test_labels[i]] = 1
     expected_values = np.transpose(np.matrix(expected_values))
-    result = studentAI.predict_with_activation(input_values)
+    result = studentAI.predict(input_values)
     if np.argmax(result) == np.argmax(expected_values):
         correct += 1
 
+print(studentAI.layers_activation_function_list)
 print(f"Accuracy: {(correct / 10000) * 100}%, {correct} / 10000")

@@ -9,4 +9,4 @@ studentAI = StudentAI(3)
 studentAI.add_custom_layer(layer_1)
 studentAI.add_custom_layer(layer_2)
 
-print(studentAI.predict_with_activation(input_values))
+print(studentAI.predict(input_values))
